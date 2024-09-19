@@ -1,0 +1,40 @@
+# Import required modules
+Import-Module Az.Accounts
+Import-Module Az.Consumption
+
+# Set the date for which you want to generate the report
+$date = Get-Date -Date "2023-02-20"
+
+# Set the Azure OpenAI Service resource ID
+$resourceId = "/subscriptions/<subscription-id>/resourceGroups/<resource-group-name>/providers/Microsoft.AzureOpenAI/services/<openai-service-name>"
+
+# Get the usage details for the specified date
+$usageDetails = Get-AzConsumptionUsageDetail -ResourceId $resourceId -StartDate $date -EndDate $date
+
+# Initialize variables to store the costs
+$computeCost =  , $memoryCost = 0, $storageCost = 0, $networkCost = 0, $totalCost = 0
+
+# Iterate through the usage details and calculate the costs
+foreach ($usage in $usageDetails) {
+    switch ($usage.MeterName) {
+        "Compute Hours" { $computeCost += $usage.Cost }
+        "Memory GB Hours" { $memoryCost += $usage.Cost }
+        "Storage GB Hours" { $storageCost += $usage.Cost }
+        "Network In/Out GB" { $networkCost += $usage.Cost }
+    }
+}
+
+# Calculate the total cost
+$totalCost = $computeCost + $memoryCost + $storageCost + $networkCost
+
+# Generate the cost analysis report
+Write-Host "Cost Analysis Report for $date"
+Write-Host "---------------------------------"
+Write-Host "Compute Hours: $" + $computeCost
+Write-Host "Memory GB Hours: $" + $memoryCost
+Write-Host "Storage GB Hours: $" + $storageCost
+Write-Host "Network In/Out GB: $" + $networkCost
+Write-Host "Total Cost: $" + $totalCost
+
+
+Write-Host "---------------------------------"
