@@ -1,0 +1,78 @@
+PowerShell script that lists all storage accounts in a subscription whose TLS version is TLS 1.0 or TLS 1.1
+
+# Install the Az.Storage module if not already installed
+Install-Module -Name Az.Storage -Force
+
+# Import the Az.Storage module
+Import-Module -Name Az.Storage
+
+# Get all storage accounts in the subscription
+$storageAccounts = Get-AzStorageAccount
+
+# Create an empty array to store the results
+$storageAccountsWithOldTls = @()
+
+# Loop through each storage account
+foreach ($storageAccount in $storageAccounts) {
+    # Get the current TLS version
+    $currentTlsVersion = $storageAccount.MinimumTlsVersion
+
+    # Check if the TLS version is TLS 1.0 or TLS 1.1
+    if ($currentTlsVersion -eq "TLS1_0" -or $currentTlsVersion -eq "TLS1_1") {
+        # Add the storage account to the results array
+        $storageAccountsWithOldTls += [PSCustomObject]@{
+            StorageAccountName = $storageAccount.StorageAccountName
+            ResourceGroupName = $storageAccount.ResourceGroupName
+            TlsVersion = $currentTlsVersion
+        }
+    }
+}
+
+# Display the results
+if ($storageAccountsWithOldTls.Count -gt 0) {
+    Write-Host "Storage accounts with TLS 1.0 or TLS 1.1:"
+    $storageAccountsWithOldTls | Format-Table -AutoSize
+} else {
+    Write-Host "No storage accounts with TLS 1.0 or TLS 1.1 found."
+}
+
+
+---------------------------------------------------------------------------------------------------------------------------------------------
+Check and Upgrade TLS Version of All Storage Accounts in a Subscription
+
+
+# Install the Az.Storage module if not already installed
+Install-Module -Name Az.Storage -Force
+
+# Import the Az.Storage module
+Import-Module -Name Az.Storage
+
+# Get all storage accounts in the subscription
+$storageAccounts = Get-AzStorageAccount
+
+# Loop through each storage account
+foreach ($storageAccount in $storageAccounts) {
+    # Get the current TLS version
+    $currentTlsVersion = $storageAccount.MinimumTlsVersion
+
+    # Check if the TLS version is TLS 1.0 or TLS 1.1
+    if ($currentTlsVersion -eq "TLS1_0" -or $currentTlsVersion -eq "TLS1_1") {
+        Write-Host "Upgrading TLS version of storage account $($storageAccount.StorageAccountName) from $currentTlsVersion to TLS 1.2"
+        # Update the TLS version to 1.2
+        $storageAccount.MinimumTlsVersion = "TLS1_2"
+        Set-AzStorageAccount -InputObject $storageAccount
+        Write-Host "TLS version of storage account $($storageAccount.StorageAccountName) has been upgraded to TLS 1.2"
+    } else {
+        Write-Host "TLS version of storage account $($storageAccount.StorageAccountName) is already $currentTlsVersion, no upgrade needed"
+    }
+}
+
+
+
+Explanation:
+
+The script installs and imports the Az.Storage module, which is required to manage Azure Storage accounts using PowerShell.
+It gets all storage accounts in the subscription using the Get-AzStorageAccount cmdlet.
+It loops through each storage account and gets the current TLS version using the MinimumTlsVersion property.
+It checks if the TLS version is TLS 1.0 or TLS 1.1. If it is, it upgrades the TLS version to 1.2 by setting the MinimumTlsVersion property to "TLS1_2" and updates the storage account context using the Set-AzStorageAccount cmdlet.
+It prints a message indicating whether the TLS version was upgraded or not.
