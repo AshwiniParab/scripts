@@ -1,3 +1,108 @@
+# Define variables
+$subscriptionId = "your_subscription_id"  # Replace with your Azure Subscription ID
+$resourceGroup = "your_resource_group"   # Optional: If filtering by resource group
+$outputFile = "Daily_Azure_Cost_Analysis_$(Get-Date -Format 'yyyy_MM_dd').xlsx"
+
+# Set date range for yesterday
+$yesterday = (Get-Date).AddDays(-1)
+$startDate = $yesterday.ToString("yyyy-MM-dd")
+$endDate = $startDate
+
+# Query Azure Cost Management API using Azure CLI
+$costData = az consumption usage list `
+    --subscription $subscriptionId `
+    --start-date $startDate `
+    --end-date $endDate `
+    --query "[?meterCategory=='Openai']" `
+    --output json | ConvertFrom-Json
+
+# Check if data is retrieved
+if (!$costData) {
+    Write-Host "No cost data found for the specified date range." -ForegroundColor Yellow
+    return
+}
+
+# Process and format the data
+$report = @()
+foreach ($entry in $costData) {
+    $report += [PSCustomObject]@{
+        "Meter Subcategory" = $entry.meterSubCategory
+        "Resource"          = $entry.instanceName
+        "Actual Cost"       = $entry.pretaxCost
+    }
+}
+
+# Export the report to an Excel file
+$report | Export-Excel -Path $outputFile -AutoSize -Title "Daily Azure Cost Analysis" -WorksheetName "Cost Analysis"
+
+Write-Host "Cost analysis saved to $outputFile" -ForegroundColor Green
+
+
+
+
+
+
+
+
+
+
+
+import datetime
+import pandas as pd
+from azure.identity import DefaultAzureCredential
+from azure.mgmt.costmanagement import CostManagementClient
+
+# Set up Azure credentials and Cost Management Client
+credential = DefaultAzureCredential()
+subscription_id = "your_subscription_id"  # Replace with your subscription ID
+client = CostManagementClient(credential)
+
+# Define the date range (yesterday's date)
+yesterday = datetime.date.today() - datetime.timedelta(days=1)
+start_date = yesterday.strftime("%Y-%m-%d")
+end_date = yesterday.strftime("%Y-%m-%d")
+
+# Query cost data
+scope = f"/subscriptions/{subscription_id}"
+query = {
+    "type": "ActualCost",
+    "timeframe": "Custom",
+    "time_period": {"from": start_date, "to": end_date},
+    "dataset": {
+        "granularity": "Daily",
+        "aggregation": {
+            "totalCost": {"name": "PreTaxCost", "function": "Sum"}
+        },
+        "grouping": [
+            {"type": "Dimension", "name": "MeterCategory"},
+            {"type": "Dimension", "name": "ResourceName"}
+        ]
+    }
+}
+
+# Fetch data
+response = client.query.usage(scope, query)
+rows = []
+
+for item in response["rows"]:
+    rows.append({
+        "Meter Subcategory": item[0],
+        "Resource": item[1],
+        "Actual Cost": item[2]
+    })
+
+# Create a DataFrame
+df = pd.DataFrame(rows)
+
+# Save to Excel
+output_file = f"Daily_Azure_Cost_Analysis_{yesterday.strftime('%Y_%m_%d')}.xlsx"
+df.to_excel(output_file, index=False)
+print(f"Cost analysis saved to {output_file}")
+
+
+
+
+
 # Import required modules
 Import-Module Az.Accounts
 Import-Module Az.Consumption
